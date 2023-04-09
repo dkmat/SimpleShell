@@ -17,40 +17,40 @@ int start();
 int start(){
     char cmd[CMDLINE_MAX];
 
-        while (1) {
-                char *nl;
-                int retval;
+        
+    while (1) {
+        char *nl;
+        int retval;
 
-                /* Print prompt */
-                printf("sshell$ ");
-                fflush(stdout);
+        /* Print prompt */
+        printf("sshell$ ");
+        fflush(stdout);
 
-                /* Get command line */
-                fgets(cmd, CMDLINE_MAX, stdin);
+        /* Get command line */
+        fgets(cmd, CMDLINE_MAX, stdin);
 
-                /* Print command line if stdin is not provided by terminal */
-                if (!isatty(STDIN_FILENO)) {
-                        printf("%s", cmd);
-                        fflush(stdout);
-                }
-
-                /* Remove trailing newline from command line */
-                nl = strchr(cmd, '\n');
-                if (nl)
-                        *nl = '\0';
-
-                /* Builtin command */
-                if (!strcmp(cmd, "exit")) {
-                        fprintf(stderr, "Bye...\n");
-                        break;
-                }
-
-                /* Regular command */
-                retval = system(cmd);
-                fprintf(stdout, "Return status value for '%s': %d\n",
-                        cmd, retval);
+        /* Print command line if stdin is not provided by terminal */
+        if (!isatty(STDIN_FILENO)) {
+            printf("%s", cmd);
+            fflush(stdout);
         }
 
-        return EXIT_SUCCESS;
+         /* Remove trailing newline from command line */
+        nl = strchr(cmd, '\n');
+        if (nl)
+                *nl = '\0';
+
+         /* Builtin command */
+        if (!strcmp(cmd, "exit")) {
+                fprintf(stderr, "Bye...\n");
+                break;
+        }
+
+         /* Regular command */
+        retval = system(cmd);
+        fprintf(stdout, "Return status value for '%s': %d\n",
+            cmd, retval);
+    }
+    return EXIT_SUCCESS;
 }
 #endif
