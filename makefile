@@ -7,4 +7,4 @@ sshell: sshell.c
 	$(CC) $(CFLAGS) -o sshell sshell.c
 
 clean:
-	rm -f sshell
+	rm -f sshel
