@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #define CMDLINE_MAX 512
 
@@ -43,8 +45,8 @@ void start(){
 
          /* Builtin command */
         if (!strcmp(cmd, "exit")) {
-                fprintf(stderr, "Bye...\n");
-                break;
+            fprintf(stderr, "Bye...\n");
+            break;
         }
 
          /* Regular command */
@@ -55,25 +57,24 @@ void start(){
 void command(char* cmd){
     
     pid_t pid;
-    int retval;
-    char * args[]={cmd};
-    char * tok1 = strtok(cmd," ");
+    char temp[CMDLINE_MAX];
+    strcpy(temp,cmd);
+    char *args[] = {temp};
+    char* tok1 = strtok(cmd," ");
     pid = fork();
     if(pid==0){
-        retval = execlp(cmd,args);
+        execvp(tok1,args);
         fprintf(stderr, "+ completed '%s': [%d]\n",
-            cmd, retval/*exit status*/);
+            temp, 0/*exit status*/);
     }
     else if(pid>0){
         int status;
-        waitpid(pid,&status,0);
-        retval = EXIT_SUCCESS;
+        wait(&status);
         fprintf(stderr, "+ completed '%s': [%d]\n",
-            cmd, retval/*exit status*/);
+            tok1, status/*exit status*/);
     }else{
-        retval = pid;
         fprintf(stderr, "+ completed '%s': [%d]\n",
-            cmd, retval/*exit status*/);
+            temp, pid/*exit status*/);
     }
 }
 #endif
