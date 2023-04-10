@@ -12,10 +12,10 @@ This file contains all the functions used to organize
 the different features of the shell program.
 */
 
-int start();
+void start();
 void command(char *cmd);
 
-int start(){
+void start(){
     char cmd[CMDLINE_MAX];
 
         
@@ -50,15 +50,30 @@ int start(){
          /* Regular command */
         command(cmd);
     }
-    return EXIT_SUCCESS;
 }
 
 void command(char* cmd){
-    //strtok()
+    
     pid_t pid;
-    char *itr;
-    char * args[]={};
-    fprintf(stderr, "+ completed '%s': '['%d']'\n",
-            cmd, 0/*exit status*/);
+    int retval;
+    char * args[]={cmd};
+    char * tok1 = strtok(cmd," ");
+    pid = fork();
+    if(pid==0){
+        retval = execlp(cmd,args);
+        fprintf(stderr, "+ completed '%s': [%d]\n",
+            cmd, retval/*exit status*/);
+    }
+    else if(pid>0){
+        int status;
+        waitpid(pid,&status,0);
+        retval = EXIT_SUCCESS;
+        fprintf(stderr, "+ completed '%s': [%d]\n",
+            cmd, retval/*exit status*/);
+    }else{
+        retval = pid;
+        fprintf(stderr, "+ completed '%s': [%d]\n",
+            cmd, retval/*exit status*/);
+    }
 }
 #endif
