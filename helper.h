@@ -13,6 +13,7 @@ the different features of the shell program.
 */
 
 int start();
+void command(char *cmd);
 
 int start(){
     char cmd[CMDLINE_MAX];
@@ -20,7 +21,7 @@ int start(){
         
     while (1) {
         char *nl;
-        int retval;
+        //int retval;
 
         /* Print prompt */
         printf("sshell$ ");
@@ -47,10 +48,17 @@ int start(){
         }
 
          /* Regular command */
-        retval = system(cmd);
-        fprintf(stdout, "Return status value for '%s': %d\n",
-            cmd, retval);
+        command(cmd);
     }
     return EXIT_SUCCESS;
+}
+
+void command(char* cmd){
+    //strtok()
+    pid_t pid;
+    char *itr;
+    char * args[]={};
+    fprintf(stderr, "+ completed '%s': '['%d']'\n",
+            cmd, 0/*exit status*/);
 }
 #endif

@@ -1,5 +1,5 @@
 #include "helper.h"
 int main(void)
 {
-        return start();
+        return start(); // starting the shell
 }
