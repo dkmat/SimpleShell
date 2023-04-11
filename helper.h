@@ -59,22 +59,20 @@ void command(char* cmd){
     pid_t pid;
     char temp[CMDLINE_MAX];
     strcpy(temp,cmd);
-    char *args[] = {temp};
-    char* tok1 = strtok(cmd," ");
+    char * tok1 = strtok_r(cmd," ",&cmd);
+    char *args[] = {tok1,cmd,NULL};
     pid = fork();
     if(pid==0){
         execvp(tok1,args);
-        fprintf(stderr, "+ completed '%s': [%d]\n",
-            temp, 0/*exit status*/);
+        fprintf(stderr, "execvp error\n");
     }
     else if(pid>0){
         int status;
         wait(&status);
         fprintf(stderr, "+ completed '%s': [%d]\n",
-            tok1, status/*exit status*/);
+            temp, status/*exit status*/);
     }else{
-        fprintf(stderr, "+ completed '%s': [%d]\n",
-            temp, pid/*exit status*/);
+        fprintf(stderr, "fork error");
     }
 }
 #endif
