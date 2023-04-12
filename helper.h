@@ -18,11 +18,10 @@ void start();
 void process(char *cmd);
 void command(char *cmd);
 int builtin(char *cmd);
-
+void copy(struct filter *correct,char *cmd);
 void start(){
     char cmd[CMDLINE_MAX];
-
-        
+    struct filter correct;
     while (1) {
         //int retval;
 
@@ -38,9 +37,9 @@ void start(){
             printf("%s", cmd);
             fflush(stdout);
         }
-
+        copy(correct,cmd);
          /* Remove trailing newline from command line */
-        process(cmd);
+        process(correct);
 
          /* Builtin command */
         if(builtin(cmd)) break;
@@ -55,9 +54,9 @@ void command(char* cmd){
     pid_t pid;
     char temp[CMDLINE_MAX];
     strcpy(temp,cmd);
-    char * tok1 = strtok_r(cmd," ",&cmd);
-    if(!strcmp(cmd,"")) cmd = NULL;
-    char *args[] = {tok1,cmd,NULL};
+    char * tok1 = strtok_r(temp," ",&temp);
+    if(!strcmp(temp,"")) temp = NULL;
+    char *args[] = {tok1,temp,NULL};
     pid = fork();
     if(pid==0){
         execvp(tok1,args);
@@ -67,7 +66,7 @@ void command(char* cmd){
         int status;
         wait(&status);
         fprintf(stderr, "+ completed '%s' [%d]\n",
-            temp, status/*exit status*/);
+            cmd, status/*exit status*/);
     }else{
         perror("fork error");
     }
@@ -93,7 +92,11 @@ void process(char* cmd){
         point++;
     }
 }
-struct something{
+
+void copy(struct filter* correct,char *cmd){
+    strcpy(correct->arr,cmd);
+}
+struct filter{
     char * arr;
 };
 #endif
