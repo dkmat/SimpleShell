@@ -18,10 +18,9 @@ void start();
 void process(char *cmd);
 void command(char *cmd);
 int builtin(char *cmd);
-void copy(struct filter *correct,char *cmd);
+//void copy(struct filter *correct,char *cmd);
 void start(){
     char cmd[CMDLINE_MAX];
-    struct filter correct;
     while (1) {
         //int retval;
 
@@ -37,9 +36,11 @@ void start(){
             printf("%s", cmd);
             fflush(stdout);
         }
-        copy(correct,cmd);
          /* Remove trailing newline from command line */
-        process(correct);
+        char *nl;
+        nl = strchr(cmd, '\n');
+        if (nl)
+            *nl = '\0';
 
          /* Builtin command */
         if(builtin(cmd)) break;
@@ -50,13 +51,14 @@ void start(){
 }
 
 void command(char* cmd){
-    
     pid_t pid;
     char temp[CMDLINE_MAX];
     strcpy(temp,cmd);
-    char * tok1 = strtok_r(temp," ",&temp);
-    if(!strcmp(temp,"")) temp = NULL;
-    char *args[] = {tok1,temp,NULL};
+    process(cmd);
+    char * tok1 = strtok_r(cmd," ",&cmd);
+    if(!strcmp(cmd,"")) cmd = NULL;
+    else if(*(cmd+0)==' ') process(cmd);
+    char *args[] = {tok1,cmd,NULL};
     pid = fork();
     if(pid==0){
         execvp(tok1,args);
@@ -65,8 +67,8 @@ void command(char* cmd){
     else if(pid>0){
         int status;
         wait(&status);
-        fprintf(stderr, "+ completed '%s' [%d]\n",
-            cmd, status/*exit status*/);
+        fprintf(stderr, "+ completed '%c' [%d]\n",
+            *(cmd+0), status/*exit status*/);
     }else{
         perror("fork error");
     }
@@ -81,22 +83,14 @@ int builtin(char* cmd){
 }
 
 void process(char* cmd){
-    char *nl;
-    nl = strchr(cmd, '\n');
-    if (nl)
-        *nl = '\0';
-    char modify[CMDLINE_MAX];
-    strcpy(modify,cmd);
-    char *point = modify;
-    while(*point == ' '){
-        point++;
+    while(*(cmd+0) == ' '){
+        ++cmd;
     }
 }
 
-void copy(struct filter* correct,char *cmd){
-    strcpy(correct->arr,cmd);
-}
 struct filter{
-    char * arr;
+    char *full;
+    char *com;
+    char *argument;
 };
 #endif
