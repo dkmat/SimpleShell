@@ -15,18 +15,19 @@ the different features of the shell program.
 */
 
 void start();
+void process(char *cmd);
 void command(char *cmd);
+int builtin(char *cmd);
 
 void start(){
     char cmd[CMDLINE_MAX];
 
         
     while (1) {
-        char *nl;
         //int retval;
 
         /* Print prompt */
-        printf("sshell$ ");
+        printf("sshell@ucd$ ");
         fflush(stdout);
 
         /* Get command line */
@@ -39,15 +40,10 @@ void start(){
         }
 
          /* Remove trailing newline from command line */
-        nl = strchr(cmd, '\n');
-        if (nl)
-                *nl = '\0';
+        process(cmd);
 
          /* Builtin command */
-        if (!strcmp(cmd, "exit")) {
-            fprintf(stderr, "Bye...\n");
-            break;
-        }
+        if(builtin(cmd)) break;
 
          /* Regular command */
         command(cmd);
@@ -60,19 +56,44 @@ void command(char* cmd){
     char temp[CMDLINE_MAX];
     strcpy(temp,cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
+    if(!strcmp(cmd,"")) cmd = NULL;
     char *args[] = {tok1,cmd,NULL};
     pid = fork();
     if(pid==0){
         execvp(tok1,args);
-        fprintf(stderr, "execvp error\n");
+        perror("execvp error\n");
     }
     else if(pid>0){
         int status;
         wait(&status);
-        fprintf(stderr, "+ completed '%s': [%d]\n",
+        fprintf(stderr, "+ completed '%s' [%d]\n",
             temp, status/*exit status*/);
     }else{
-        fprintf(stderr, "fork error");
+        perror("fork error");
     }
 }
+
+int builtin(char* cmd){
+    if (!strcmp(cmd, "exit")) {
+        fprintf(stderr,"Bye...\n+ completed 'exit' [%d]\n",EXIT_SUCCESS);
+        return 1;
+    }
+    return 0;
+}
+
+void process(char* cmd){
+    char *nl;
+    nl = strchr(cmd, '\n');
+    if (nl)
+        *nl = '\0';
+    char modify[CMDLINE_MAX];
+    strcpy(modify,cmd);
+    char *point = modify;
+    while(*point == ' '){
+        point++;
+    }
+}
+struct something{
+    char * arr;
+};
 #endif
