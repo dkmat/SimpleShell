@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <ctype.h>
 
 #define CMDLINE_MAX 512
 
@@ -46,7 +47,8 @@ void start(){
         if(builtin(cmd)) break;
 
          /* Regular command */
-        command(cmd);
+        if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
+            command(cmd);
     }
 }
 
@@ -67,10 +69,10 @@ void command(char* cmd){
     else if(pid>0){
         int status;
         wait(&status);
-        fprintf(stderr, "+ completed '%c' [%d]\n",
-            *(cmd+0), status/*exit status*/);
+        fprintf(stderr, "+ completed '%s' [%d]\n",
+            temp, status/*exit status*/);
     }else{
-        perror("fork error");
+        perror("fork error\n");
     }
 }
 
@@ -79,13 +81,44 @@ int builtin(char* cmd){
         fprintf(stderr,"Bye...\n+ completed 'exit' [%d]\n",EXIT_SUCCESS);
         return 1;
     }
+    if(!strcmp(cmd,"pwd")){
+        char buf[CMDLINE_MAX];
+        if(getcwd(buf,sizeof(buf))!=NULL){
+            fprintf(stderr, "%s\n+ completed 'pwd' [%d]\n", buf, EXIT_SUCCESS);
+        }
+        else{
+            perror("getcwd error\n");
+        }
+    }
+    char substr[3];
+    strncpy(substr,cmd,2);
+    substr[2] = '\0';
+    if(!strcmp(substr,"cd")){
+        char original[CMDLINE_MAX];
+        strcpy(original,cmd);
+        char *tok2 = strtok_r(cmd," ",&cmd);
+        int retval = chdir(cmd);
+        if(retval==-1){
+            perror("chdir error\n");
+        }
+        fprintf(stderr,"+ completed '%s' [%d]\n", original, retval);
+        *cmd = *tok2;
+    }
     return 0;
 }
 
 void process(char* cmd){
-    while(*(cmd+0) == ' '){
-        ++cmd;
+    //fprintf(stderr,"in process!\n");
+    char *begin = cmd;
+    char *end = cmd + strlen(cmd) -1;
+    while(isspace(*begin)){
+        ++begin;
     }
+    while(isspace(*end)){
+        --end;
+    }
+    *(end + 1) = '\0';
+    memmove(cmd, begin, strlen(begin)+1);
 }
 
 struct filter{
