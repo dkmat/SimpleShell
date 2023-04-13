@@ -42,7 +42,7 @@ void start(){
         nl = strchr(cmd, '\n');
         if (nl)
             *nl = '\0';
-
+        process(cmd);
          /* Builtin command */
         if(builtin(cmd)) break;
 
@@ -84,7 +84,7 @@ int builtin(char* cmd){
     if(!strcmp(cmd,"pwd")){
         char buf[CMDLINE_MAX];
         if(getcwd(buf,sizeof(buf))!=NULL){
-            fprintf(stderr, "%s\n+ completed 'pwd' [%d]\n", buf, EXIT_SUCCESS);
+            fprintf(stderr, "%s\n+ completed '%s' [%d]\n", buf,cmd, EXIT_SUCCESS);
         }
         else{
             perror("getcwd error\n");
@@ -97,6 +97,7 @@ int builtin(char* cmd){
         char original[CMDLINE_MAX];
         strcpy(original,cmd);
         char *tok2 = strtok_r(cmd," ",&cmd);
+        process(cmd);
         int retval = chdir(cmd);
         if(retval==-1){
             perror("chdir error\n");
