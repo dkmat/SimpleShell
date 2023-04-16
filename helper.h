@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #define CMDLINE_MAX 512
 
@@ -19,7 +20,8 @@ void start();
 void process(char *cmd);
 void command(char *cmd);
 int builtin(char *cmd);
-//void copy(struct filter *correct,char *cmd);
+int redirect(char *cmd);
+
 void start(){
     char cmd[CMDLINE_MAX];
     while (1) {
@@ -56,10 +58,10 @@ void command(char* cmd){
     pid_t pid;
     char temp[CMDLINE_MAX];
     strcpy(temp,cmd);
-    process(cmd);
+    int revert = redirect(cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
     if(!strcmp(cmd,"")) cmd = NULL;
-    else if(*(cmd+0)==' ') process(cmd);
+    else if(cmd[0]==' ') process(cmd);
     char *args[] = {tok1,cmd,NULL};
     pid = fork();
     if(pid==0){
@@ -69,6 +71,7 @@ void command(char* cmd){
     else if(pid>0){
         int status;
         wait(&status);
+        dup2(revert,STDOUT_FILENO);
         fprintf(stderr, "+ completed '%s' [%d]\n",
             temp, status/*exit status*/);
     }else{
@@ -122,6 +125,20 @@ void process(char* cmd){
     memmove(cmd, begin, strlen(begin)+1);
 }
 
+int redirect(char* cmd){
+    char *meta = strchr(cmd,'>');
+    if(meta){
+        int std = dup(STDOUT_FILENO);
+        meta = strtok_r(cmd,">",&cmd);
+        process(cmd);
+        int fd = open(cmd,O_WRONLY|O_RDONLY,0644);
+        dup2(fd,STDOUT_FILENO);
+        close(fd);
+        strcpy(cmd,meta);
+        return std;
+    }
+    return 1;
+}
 struct filter{
     char *full;
     char *com;
