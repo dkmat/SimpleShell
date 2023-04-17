@@ -188,6 +188,8 @@ int pipeline(struct filter* multi,char *cmd){
                     execvp(args[0],args);
                 }
             }
+            close(fd[0]);
+            close(fd[1]);
             wait(&stat);
             status[i] = stat;
         }
