@@ -60,8 +60,8 @@ void command(char* cmd){
     strcpy(temp,cmd);
     int revert = redirect(cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
+    process(cmd);
     if(!strcmp(cmd,"")) cmd = NULL;
-    else if(cmd[0]==' ') process(cmd);
     char *args[] = {tok1,cmd,NULL};
     pid = fork();
     if(pid==0){
@@ -73,7 +73,7 @@ void command(char* cmd){
         wait(&status);
         dup2(revert,STDOUT_FILENO);
         fprintf(stderr, "+ completed '%s' [%d]\n",
-            temp, status/*exit status*/);
+            temp, status);
     }else{
         perror("fork error\n");
     }
@@ -131,7 +131,7 @@ int redirect(char* cmd){
         int std = dup(STDOUT_FILENO);
         meta = strtok_r(cmd,">",&cmd);
         process(cmd);
-        int fd = open(cmd,O_WRONLY|O_RDONLY,0644);
+        int fd = open(cmd,O_WRONLY|O_CREAT,0644);
         dup2(fd,STDOUT_FILENO);
         close(fd);
         strcpy(cmd,meta);
