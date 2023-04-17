@@ -15,17 +15,19 @@
 This file contains all the functions used to organize 
 the different features of the shell program.
 */
-
+struct filter{
+    char *full;
+    char *line;
+};
 void start();
 void process(char *cmd);
 void command(char *cmd);
 int builtin(char *cmd);
 int redirect(char *cmd);
-
+int pipeline(struct filter* multi, char *cmd);
 void start(){
     char cmd[CMDLINE_MAX];
     while (1) {
-        //int retval;
 
         /* Print prompt */
         printf("sshell@ucd$ ");
@@ -45,12 +47,15 @@ void start(){
         if (nl)
             *nl = '\0';
         process(cmd);
-         /* Builtin command */
-        if(builtin(cmd)) break;
+        struct filter multi;
+        if(!pipeline(&multi,cmd)){
+             /* Builtin command */
+            if(builtin(cmd)) break;
 
          /* Regular command */
-        if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
-            command(cmd);
+            if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
+                command(cmd);
+        }
     }
 }
 
@@ -139,9 +144,62 @@ int redirect(char* cmd){
     }
     return 1;
 }
-struct filter{
-    char *full;
-    char *com;
-    char *argument;
-};
+int pipeline(struct filter* multi,char *cmd){
+    char*track = strchr(cmd,'|');
+    if(track){
+        int count = 0;
+        while(track[0]!='\0'){
+            if(track[0]=='|'){
+                count++;
+            }
+            track++;
+        }
+        strcpy(multi->full,cmd);
+        pid_t pid1;
+        int fd[2],status[count+1];
+        int stat;
+        int std = dup(STDOUT_FILENO);
+        pipe(fd);
+        for(int i =0;i<count+1;i++){
+            multi->line = strtok_r(cmd,"|",&cmd);
+            process(multi->line);
+            track = strtok_r(multi->line," ",&multi->line);
+            process(multi->line);
+            if(!strcmp(multi->line,"")) multi->line = NULL;
+            char *args[] = {track,multi->line,NULL};
+            if(!(pid1 = fork())){
+                if(i==count){
+                    close(fd[1]);
+                    dup2(fd[0],STDIN_FILENO);
+                    close(fd[0]);
+                    execvp(args[0],args);
+                }
+                if(i==0){
+                    close(fd[0]);
+                    dup2(fd[1],STDOUT_FILENO);
+                    close(fd[1]);
+                    execvp(args[0],args);
+                }
+                if(i>0 && i<count){
+                    dup2(fd[0],STDIN_FILENO);
+                    dup2(fd[1],STDOUT_FILENO);
+                    close(fd[0]);
+                    close(fd[1]);
+                    execvp(args[0],args);
+                }
+            }
+            wait(&stat);
+            status[i] = stat;
+        }
+        dup2(std,STDOUT_FILENO);
+        fprintf(stderr, "+ completed '%s'",multi->full);
+        for(int i=0;i<count+1;i++){
+            fprintf(stderr,"[%d]",status[i]);
+        }
+        fprintf(stderr,"\n");
+        return 1;
+    }
+    else return 0;
+}
+
 #endif
