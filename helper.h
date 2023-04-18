@@ -21,7 +21,7 @@ void process(char *cmd);
 void command(char *cmd);
 int builtin(char *cmd);
 int redirect(char *cmd);
-int pipeline(struct filter* multi, char *cmd);
+int pipeline(char *cmd);
 void start(){
     char cmd[CMDLINE_MAX];
     while (1) {
@@ -44,8 +44,7 @@ void start(){
         if (nl)
             *nl = '\0';
         process(cmd);
-        struct filter multi;
-        if(!pipeline(&multi,cmd)){
+        if(!pipeline(cmd)){
              /* Builtin command */
             if(builtin(cmd)) break;
 
@@ -151,19 +150,21 @@ int pipeline(char *cmd){
             }
             track++;
         }
-        strcpy(multi->full,cmd);
+        char full[CMDLINE_MAX];
+        char *line;
+        strcpy(full,cmd);
         pid_t pid1;
         int fd[2],status[count+1];
         int stat;
         int std = dup(STDOUT_FILENO);
         pipe(fd);
         for(int i =0;i<count+1;i++){
-            multi->line = strtok_r(cmd,"|",&cmd);
-            process(multi->line);
-            track = strtok_r(multi->line," ",&multi->line);
-            process(multi->line);
-            if(!strcmp(multi->line,"")) multi->line = NULL;
-            char *args[] = {track,multi->line,NULL};
+            line = strtok_r(cmd,"|",&cmd);
+            process(line);
+            track = strtok_r(line," ",&line);
+            process(line);
+            if(!strcmp(line,"")) line = NULL;
+            char *args[] = {track,line,NULL};
             if(!(pid1 = fork())){
                 if(i==count){
                     close(fd[1]);
@@ -191,7 +192,7 @@ int pipeline(char *cmd){
             status[i] = stat;
         }
         dup2(std,STDOUT_FILENO);
-        fprintf(stderr, "+ completed '%s'",multi->full);
+        fprintf(stderr, "+ completed '%s'",full);
         for(int i=0;i<count+1;i++){
             fprintf(stderr,"[%d]",status[i]);
         }
