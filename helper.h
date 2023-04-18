@@ -61,13 +61,24 @@ void command(char* cmd){
     strcpy(temp,cmd);
     int revert = redirect(cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
+    char * tok2 = 0;
+    int list=0;
     process(cmd);
+    if(cmd[0]=='-'&&cmd[2]==' '){
+        tok2 = strtok_r(cmd," ",&cmd);
+        process(cmd);
+        list = 1;
+    }
     if(!strcmp(cmd,"")) cmd = NULL;
     char *args[] = {tok1,cmd,NULL};
     pid = fork();
-    if(pid==0){
+    if(pid==0&&!list){
         execvp(tok1,args);
         perror("execvp error\n");
+    }
+    else if(pid==0&&list){
+        execlp(tok1,tok2,cmd,NULL);
+        perror("execlp error\n");
     }
     else if(pid>0){
         int status;
