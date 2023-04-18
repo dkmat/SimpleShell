@@ -15,10 +15,7 @@
 This file contains all the functions used to organize 
 the different features of the shell program.
 */
-struct filter{
-    char *full;
-    char *line;
-};
+
 void start();
 void process(char *cmd);
 void command(char *cmd);
@@ -144,7 +141,7 @@ int redirect(char* cmd){
     }
     return 1;
 }
-int pipeline(struct filter* multi,char *cmd){
+int pipeline(char *cmd){
     char*track = strchr(cmd,'|');
     if(track){
         int count = 0;
