@@ -99,7 +99,8 @@ int builtin(char* cmd){
     if(!strcmp(cmd,"pwd")){
         char buf[CMDLINE_MAX];
         if(getcwd(buf,sizeof(buf))!=NULL){
-            fprintf(stderr, "%s\n+ completed '%s' [%d]\n", buf,cmd, EXIT_SUCCESS);
+            fprintf(stdout, "%s\n",buf);
+            fprintf(stderr,"+ completed '%s' [%d]\n",cmd, EXIT_SUCCESS);
         }
         else{
             perror("getcwd error\n");
@@ -167,42 +168,8 @@ int pipeline(char *cmd){
         pid_t pid1;
         int fd[2],status[count+1];
         int stat;
-        int std = dup(STDOUT_FILENO);
-        pipe(fd);
-        for(int i =0;i<count+1;i++){
-            line = strtok_r(cmd,"|",&cmd);
-            process(line);
-            track = strtok_r(line," ",&line);
-            process(line);
-            if(!strcmp(line,"")) line = NULL;
-            char *args[] = {track,line,NULL};
-            if(!(pid1 = fork())){
-                if(i==count){
-                    close(fd[1]);
-                    dup2(fd[0],STDIN_FILENO);
-                    close(fd[0]);
-                    execvp(args[0],args);
-                }
-                if(i==0){
-                    close(fd[0]);
-                    dup2(fd[1],STDOUT_FILENO);
-                    close(fd[1]);
-                    execvp(args[0],args);
-                }
-                if(i>0 && i<count){
-                    dup2(fd[0],STDIN_FILENO);
-                    dup2(fd[1],STDOUT_FILENO);
-                    close(fd[0]);
-                    close(fd[1]);
-                    execvp(args[0],args);
-                }
-            }
-            close(fd[0]);
-            close(fd[1]);
-            wait(&stat);
-            status[i] = stat;
-        }
-        dup2(std,STDOUT_FILENO);
+        int stdo = dup(STDOUT_FILENO);
+        int stdi = dup(STDIN_FILENO);
         fprintf(stderr, "+ completed '%s'",full);
         for(int i=0;i<count+1;i++){
             fprintf(stderr,"[%d]",status[i]);
