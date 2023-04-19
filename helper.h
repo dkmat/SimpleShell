@@ -57,8 +57,8 @@ void start(){
 
 void command(char* cmd){
     pid_t pid;
-    char temp[CMDLINE_MAX];
-    strcpy(temp,cmd);
+    char full[CMDLINE_MAX];
+    strcpy(full,cmd);
     int revert = redirect(cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
     char * tok2 = 0;
@@ -85,7 +85,7 @@ void command(char* cmd){
         wait(&status);
         dup2(revert,STDOUT_FILENO);
         fprintf(stderr, "+ completed '%s' [%d]\n",
-            temp, status);
+            full, status);
     }else{
         perror("fork error\n");
     }
@@ -125,7 +125,6 @@ int builtin(char* cmd){
 }
 
 void process(char* cmd){
-    //fprintf(stderr,"in process!\n");
     char *begin = cmd;
     char *end = cmd + strlen(cmd) -1;
     while(isspace(*begin)){
@@ -165,11 +164,22 @@ int pipeline(char *cmd){
         char full[CMDLINE_MAX];
         char *line;
         strcpy(full,cmd);
-        pid_t pid1;
+        char *pipecoms[count+1];
+        pid_t pid1, pid2;
         int fd[2],status[count+1];
-        int stat;
         int stdo = dup(STDOUT_FILENO);
         int stdi = dup(STDIN_FILENO);
+        for(int i=1;i<=count;i++){
+            pipe(fd);
+            pid1 = fork();
+            if(pid1==0){
+                close(fd[0]);
+                dup2(fd[1],STDOUT_FILENO);
+                close(fd[1]);
+                execvp();
+            }
+        }
+        
         fprintf(stderr, "+ completed '%s'",full);
         for(int i=0;i<count+1;i++){
             fprintf(stderr,"[%d]",status[i]);
