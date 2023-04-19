@@ -19,6 +19,7 @@ the different features of the shell program.
 void start();
 void process(char *cmd);
 void command(char *cmd);
+void pipCommand(char *cmd);
 int builtin(char *cmd);
 int redirect(char *cmd);
 int pipeline(char *cmd);
@@ -151,9 +152,32 @@ int redirect(char* cmd){
     }
     return 1;
 }
+void pipCommand(char *cmd){
+    char * tok1 = strtok_r(cmd," ",&cmd);
+    char * tok2 = 0;
+    int list=0;
+    process(cmd);
+    if(cmd[0]=='-'&&cmd[2]==' '){
+        tok2 = strtok_r(cmd," ",&cmd);
+        process(cmd);
+        list = 1;
+    }
+    if(!strcmp(cmd,"")) cmd = NULL;
+    char *args[] = {tok1,cmd,NULL};
+    if(!list){
+        execvp(tok1,args);
+        perror("execvp error\n");
+    }
+    else if(list){
+        execlp(tok1,tok2,cmd,NULL);
+        perror("execlp error\n");
+    }
+}
+
 int pipeline(char *cmd){
     char*track = strchr(cmd,'|');
     if(track){
+        int i;
         int count = 0;
         while(track[0]!='\0'){
             if(track[0]=='|'){
@@ -162,9 +186,19 @@ int pipeline(char *cmd){
             track++;
         }
         char full[CMDLINE_MAX];
-        char *line;
+        char *splitComs[count+1];
         strcpy(full,cmd);
-        char *pipecoms[count+1];
+        for(i=0;i<=count;i++){
+            if(i==count){
+                splitComs[i]=cmd;
+                process(splitComs[i]);
+            }
+            else{
+                splitComs[i]=strtok_r(cmd,"|",&cmd);
+                process(splitComs[i]);
+            }
+            
+        }
         pid_t pid1, pid2;
         int fd[2],status[count+1];
         int stdo = dup(STDOUT_FILENO);
@@ -176,10 +210,22 @@ int pipeline(char *cmd){
                 close(fd[0]);
                 dup2(fd[1],STDOUT_FILENO);
                 close(fd[1]);
-                execvp();
+                pipCommand(splitComs[i-1]);
             }
+            pid2 = fork();
+            if(pid2==0){
+                close(fd[1]);
+                dup2(fd[0],STDIN_FILENO);
+                close(fd[0]);
+                pipCommand(splitComs[i]);
+            }
+            close(fd[0]);
+            close(fd[1]);
+            waitpid(pid1,&status[i-1],0);
+            waitpid(pid2,&status[i],0);
         }
-        
+        dup2(stdo,STDOUT_FILENO);
+        dup2(stdi,STDIN_FILENO);
         fprintf(stderr, "+ completed '%s'",full);
         for(int i=0;i<count+1;i++){
             fprintf(stderr,"[%d]",status[i]);
@@ -189,5 +235,6 @@ int pipeline(char *cmd){
     }
     else return 0;
 }
+
 
 #endif
