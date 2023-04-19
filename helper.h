@@ -10,6 +10,8 @@
 #include <fcntl.h>
 
 #define CMDLINE_MAX 512
+#define MAX_PIPE 3
+#define PIPE_FD 2
 
 /*
 This file contains all the functions used to organize 
@@ -199,35 +201,136 @@ int pipeline(char *cmd){
             }
             
         }
-        pid_t pid1, pid2;
-        int fd[2],status[count+1];
-        int stdo = dup(STDOUT_FILENO);
-        int stdi = dup(STDIN_FILENO);
-        for(int i=1;i<=count;i++){
-            pipe(fd);
+        int status[count+1];
+        pid_t pid1,pid2;
+        int fd1[2];
+        if(count==1){
+            pipe(fd1);
             pid1 = fork();
-            if(pid1==0){
-                close(fd[0]);
-                dup2(fd[1],STDOUT_FILENO);
-                close(fd[1]);
-                pipCommand(splitComs[i-1]);
+            if(pid1 ==0){
+                close(fd1[0]);
+                dup2(fd1[1],STDOUT_FILENO);
+                close(fd1[1]);
+                pipCommand(splitComs[0]);
             }
             pid2 = fork();
-            if(pid2==0){
-                close(fd[1]);
-                dup2(fd[0],STDIN_FILENO);
-                close(fd[0]);
-                pipCommand(splitComs[i]);
+            if(pid2 == 0){
+                close(fd1[1]);
+                dup2(fd1[0],STDIN_FILENO);
+                close(fd1[0]);
+                pipCommand(splitComs[1]);
             }
-            close(fd[0]);
-            close(fd[1]);
-            waitpid(pid1,&status[i-1],0);
-            waitpid(pid2,&status[i],0);
+            close(fd1[0]);
+            close(fd1[1]);
+            waitpid(pid1,&status[0],0);
+            waitpid(pid2,&status[1],0);
         }
-        dup2(stdo,STDOUT_FILENO);
-        dup2(stdi,STDIN_FILENO);
+        else if(count ==2){
+            pid_t pid3;
+            int fd2[2];
+            pipe(fd1);
+            pipe(fd2);
+            pid1 = fork();
+            if(pid1==0){
+                close(fd1[0]);
+                close(fd2[0]);
+                close (fd2[1]);
+                dup2(fd1[1],STDOUT_FILENO);
+                close(fd1[1]);
+                pipCommand(splitComs[0]);
+            }
+            pid2 = fork();
+            if(pid2 ==0){
+                close(fd1[1]);
+                close(fd2[0]);
+                dup2(fd1[0],STDIN_FILENO);
+                close(fd1[0]);
+                dup2(fd2[1],STDOUT_FILENO);
+                close(fd2[1]);
+                pipCommand(splitComs[1]);
+            }
+            pid3 = fork();
+            if(pid3 == 0){
+                close(fd1[0]);
+                close(fd1[1]);
+                close(fd2[1]);
+                dup2(fd2[0],STDIN_FILENO);
+                close(fd2[0]);
+                pipCommand(splitComs[2]);
+            }
+            close(fd1[0]);
+            close(fd1[1]);
+            close(fd2[0]);
+            close(fd2[1]);
+            waitpid(pid1,&status[0],0);
+            waitpid(pid2,&status[1],0);
+            waitpid(pid3,&status[2],0);
+        }
+        else if(count ==3){
+            pid_t pid3,pid4;
+            int fd2[2],fd3[2];
+            pipe(fd1);
+            pipe(fd2);
+            pipe(fd3);
+            pid1 = fork();
+            if(pid1==0){
+                close(fd1[0]);
+                close(fd2[0]);
+                close (fd2[1]);
+                close(fd3[0]);
+                close(fd3[1]);
+                dup2(fd1[1],STDOUT_FILENO);
+                close(fd1[1]);
+                pipCommand(splitComs[0]);
+            }
+            pid2 = fork();
+            if(pid2 ==0){
+                close(fd1[1]);
+                close(fd2[0]);
+                close(fd3[0]);
+                close(fd3[1]);
+                dup2(fd1[0],STDIN_FILENO);
+                close(fd1[0]);
+                dup2(fd2[1],STDOUT_FILENO);
+                close(fd2[1]);
+                pipCommand(splitComs[1]);
+            }
+            pid3 = fork();
+            if(pid3 == 0){
+                close(fd1[0]);
+                close(fd1[1]);
+                close(fd2[1]);
+                close(fd3[0]);
+                dup2(fd2[0],STDIN_FILENO);
+                close(fd2[0]);
+                dup2(fd3[1],STDOUT_FILENO);
+                close(fd3[1]);
+                pipCommand(splitComs[2]);
+            }
+            pid4 = fork();
+            if(pid4==0){
+                close(fd1[0]);
+                close(fd1[1]);
+                close(fd2[0]);
+                close(fd2[1]);
+                close(fd3[1]);
+                dup2(fd3[0],STDIN_FILENO);
+                close(fd3[0]);
+                pipCommand(splitComs[3]);
+            }
+            close(fd1[0]);
+            close(fd1[1]);
+            close(fd2[0]);
+            close(fd2[1]);
+            close(fd3[0]);
+            close(fd3[1]);
+            waitpid(pid1,&status[0],0);
+            waitpid(pid2,&status[1],0);
+            waitpid(pid3,&status[2],0);
+            waitpid(pid4,&status[3],0);
+        }
         fprintf(stderr, "+ completed '%s'",full);
-        for(int i=0;i<count+1;i++){
+        for(int i=0;i<=count;i++){
             fprintf(stderr,"[%d]",status[i]);
         }
         fprintf(stderr,"\n");
