@@ -98,27 +98,13 @@ int parseError(char *cmd){
         fprintf(stderr,"Error: mislocated output redirection\n");
         return 1;
     }
-    char *filename = original;
-    if(miss!=NULL){
-        FILE *unable;
-        strtok_r(filename,">",&filename);
-        process(filename);
-        unable = fopen(filename,"r");
-        if(unable == NULL){
-            fprintf(stderr,"Error: cannot open output file\n");
-            return 1;
-        }
-        else{
-            fclose(unable);
-        }
-    }
-    
     return 0;
 }
 void command(char* cmd){
     pid_t pid;
     char full[CMDLINE_MAX];
     strcpy(full,cmd);
+    int stdi = dup(STDERR_FILENO);
     int revert = redirect(cmd);
     char * tok1 = strtok_r(cmd," ",&cmd);
     char * tok2 = 0;
@@ -134,20 +120,23 @@ void command(char* cmd){
     pid = fork();
     if(pid==0&&!list){
         execvp(tok1,args);
-        perror("execvp error\n");
+        dup2(stdi,STDERR_FILENO);
+        fprintf(stderr,"Error: command not found\n");
+        exit(EXIT_FAILURE);
     }
     else if(pid==0&&list){
         execlp(tok1,tok2,cmd,NULL);
-        perror("execlp error\n");
+        dup2(stdi,STDERR_FILENO);
+        fprintf(stderr,"Error: command not found\n");
+        exit(EXIT_FAILURE);
     }
-    else if(pid>0){
+    if(pid>0){
         int status;
         wait(&status);
         dup2(revert,STDOUT_FILENO);
+        dup2(stdi,STDERR_FILENO);
         fprintf(stderr, "+ completed '%s' [%d]\n",
-            full, status);
-    }else{
-        perror("fork error\n");
+            full, WEXITSTATUS(status));
     }
 }
 
@@ -202,12 +191,24 @@ int redirect(char* cmd){
     char *meta = strchr(cmd,'>');
     if(meta){
         int std = dup(STDOUT_FILENO);
-        meta = strtok_r(cmd,">",&cmd);
-        process(cmd);
+        meta = strstr(cmd,">&");
+        char *redir;
+        if(meta){
+            redir = strtok_r(cmd,"&",&cmd);
+            process(cmd);
+            redir = strtok(redir,">");
+            process(redir);
+        }else{
+            redir = strtok_r(cmd,">",&cmd);
+            process(cmd);
+        }
         int fd = open(cmd,O_WRONLY|O_CREAT,0644);
         dup2(fd,STDOUT_FILENO);
+        if(meta){
+            dup2(fd,STDERR_FILENO);
+        }
         close(fd);
-        strcpy(cmd,meta);
+        strcpy(cmd,redir);
         return std;
     }
     return 1;
@@ -397,7 +398,7 @@ int pipeline(char *cmd){
         }
         fprintf(stderr, "+ completed '%s'",full);
         for(int i=0;i<=count;i++){
-            fprintf(stderr,"[%d]",status[i]);
+            fprintf(stderr,"[%d]",WEXITSTATUS(status[i]));
         }
         fprintf(stderr,"\n");
         return 1;
