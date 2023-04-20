@@ -12,6 +12,7 @@
 #define CMDLINE_MAX 512
 #define MAX_PIPE 3
 #define PIPE_FD 2
+#define STR_MAX 26
 
 /*
 This file contains all the functions used to organize 
@@ -26,8 +27,10 @@ int builtin(char *cmd);
 int redirect(char *cmd);
 int pipeline(char *cmd);
 int parseError(char *cmd);
+int environVar(char *cmd, char* env_var[] );
 void start(){
     char cmd[CMDLINE_MAX];
+    char env_var[STR_MAX];
     while (1) {
 
         /* Print prompt */
