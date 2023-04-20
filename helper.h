@@ -100,12 +100,12 @@ int parseError(char *cmd){ //We check for all possible parsing errors one by one
         fprintf(stderr,"Error: missing command\n");
         return 1;
     }
-    char * miss = strchr(cmd,'>');
-    if(miss!=NULL && cmd[strlen(cmd)-1]=='>'){
+    char *miss_redir = strchr(cmd,'>');
+    if(miss_redir!=NULL && cmd[strlen(cmd)-1]=='>'){
         fprintf(stderr,"Error: no output file\n");
         return 1;
     }
-    if(miss!= NULL && missPipe!=NULL && miss < missPipe){
+    if(miss_redir!= NULL && missPipe!=NULL && miss_redir < missPipe){
         fprintf(stderr,"Error: mislocated output redirection\n");
         return 1;
     }
@@ -152,7 +152,7 @@ void command(char* cmd){ //The function used to make syscalls and also call for 
     }
 }
 
-int builtin(char* cmd, char* env_var[]){
+int builtin(char* cmd, char* env_var[]){ //This function is used to parse through the built-in commands
     if (!strcmp(cmd, "exit")) {
         fprintf(stderr,"Bye...\n+ completed 'exit' [%d]\n",EXIT_SUCCESS);
         return 1;
@@ -183,7 +183,7 @@ int builtin(char* cmd, char* env_var[]){
         fprintf(stderr,"+ completed '%s' [%d]\n", original, WEXITSTATUS(retval));
         *cmd = *tok2;
     }
-    char setEnv[4];
+    char setEnv[4]; /*Setting environmental variables*/
     strncpy(setEnv,cmd,3);
     setEnv[3] = '\0';
     if(!strcmp(setEnv,"set")){
@@ -211,7 +211,7 @@ int builtin(char* cmd, char* env_var[]){
     return 0;
 }
 
-void process(char* cmd){
+void process(char* cmd){ //This function removes the trailing newline
     char *begin = cmd;
     char *end = cmd + strlen(cmd) -1;
     while(isspace(*begin)){
@@ -225,9 +225,9 @@ void process(char* cmd){
 }
 
 int redirect(char* cmd){
-    char *meta = strchr(cmd,'>');
+    char *meta = strchr(cmd,'>'); //meta is for meta characters
     if(meta){
-        int std = dup(STDOUT_FILENO);
+        int std = dup(STDOUT_FILENO); //copy std to STDOUT_FILENO before redirection
         meta = strstr(cmd,">&");
         char *redir;
         if(meta){
@@ -250,7 +250,7 @@ int redirect(char* cmd){
     }
     return 1;
 }
-void pipCommand(char *cmd,int last){
+void pipCommand(char *cmd,int last){ //This function executes the commands on the command line through the pipe. It ensures all the commands are able to interact with each other through the pipe. 
     int revert;
     if(last){
         revert = redirect(cmd);
@@ -282,7 +282,7 @@ void pipCommand(char *cmd,int last){
     
 }
 
-int pipeline(char *cmd){
+int pipeline(char *cmd){ //This function does the actual piping of the command line
     char*track = strchr(cmd,'|');
     if(track){
         int i;
@@ -444,7 +444,7 @@ int pipeline(char *cmd){
     }
     else return 0;
 }
-int environVar(char* cmd, char* env_var[]){
+int environVar(char* cmd, char* env_var[]){ //This function implements simple environment variables. It ensures that string variables, specifically, 26 characters from a-z can be used as a part of a command.
     char* var = strchr(cmd,'$');
     char original[CMDLINE_MAX]; 
     strcpy(original,cmd);
