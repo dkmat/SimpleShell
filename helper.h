@@ -28,9 +28,13 @@ int redirect(char *cmd);
 int pipeline(char *cmd);
 int parseError(char *cmd);
 int environVar(char *cmd, char* env_var[] );
+void findVar(char *cmd, char* env_var[]);
 void start(){
     char cmd[CMDLINE_MAX];
-    char env_var[STR_MAX];
+    char* env_var[STR_MAX];
+    for(int i=0;i<STR_MAX;i++){
+        env_var[i]="";
+    }
     while (1) {
 
         /* Print prompt */
@@ -52,8 +56,8 @@ void start(){
             *nl = '\0';
         
         process(cmd);
-
-        if(!parseError(cmd)){
+        if(environVar(cmd,env_var)){}
+        else if(!parseError(cmd)){
 
             if(!pipeline(cmd)){
 
@@ -409,12 +413,33 @@ int pipeline(char *cmd){
     else return 0;
 }
 int environVar(char* cmd, char* env_var[]){
-
-    if(cmd[0] == '$'){ //to-do: space between dollar sign case 
-        for(int i = 0; i < STR_MAX; i++){
-            env_var[i] = "";
+    char* var = strchr(cmd,'$');
+    char original[CMDLINE_MAX]; 
+    strcpy(original,cmd);
+    int valid=0;
+    if(var){
+        while(var[0]!=' ' && var[0] != '\0'){
+            valid++;
+            ++var;
         }
+        if(valid>1){
+            fprintf(stderr,"Error: invalid variable name %c\n",var[0]);
+            return 1;
+        }
+        else{
+            valid = var[0]-97;
+            if(valid>25 || valid<0){
+                fprintf(stderr,"Error: invalid variable name\n");
+                return 1;
+            }
+        }
+        char *orig = original;
+        char* multi = strtok_r(orig,"$",&orig);
+        multi = strcat(multi,env_var[orig[0]-97]);
+        command(multi);
+        return 1;
     }
+    return 0;
 }
 
 #endif
