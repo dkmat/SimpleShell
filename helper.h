@@ -405,6 +405,13 @@ int pipeline(char *cmd){
     }
     else return 0;
 }
+int environVar(char* cmd, char* env_var[]){
 
+    if(cmd[0] == '$'){ //to-do: space between dollar sign case 
+        for(int i = 0; i < STR_MAX; i++){
+            env_var[i] = "";
+        }
+    }
+}
 
 #endif
