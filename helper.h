@@ -47,9 +47,13 @@ void start(){
         nl = strchr(cmd, '\n');
         if (nl)
             *nl = '\0';
+        
         process(cmd);
+
         if(!parseError(cmd)){
+
             if(!pipeline(cmd)){
+
                 /* Builtin command */
                 if(builtin(cmd)) break;
 
@@ -71,11 +75,11 @@ int parseError(char *cmd){
         count++;
         tok = strtok(NULL," ");
     }
-    strcpy(original,cmd);
     if(count>=16) {
         fprintf(stderr,"Error: too many process arguments\n");
         return 1;
     }
+    strcpy(original,cmd);
     if(cmd[0]=='>'||cmd[0]=='|'){
         fprintf(stderr,"Error: missing command\n");
         return 1;
@@ -90,20 +94,22 @@ int parseError(char *cmd){
         fprintf(stderr,"Error: no output file\n");
         return 1;
     }
-    if(miss!= NULL){
-        strtok_r(cmd,">",&cmd);
-        process(cmd);
-        FILE *unable = fopen(cmd,"r");
-        if(unable==NULL){
+    char *filename = original;
+    if(miss!=NULL){
+        FILE *unable;
+        strtok_r(filename,">",&filename);
+        process(filename);
+        unable = fopen(filename,"r");
+        if(unable == NULL){
             fprintf(stderr,"Error: cannot open output file\n");
             return 1;
         }
         else{
-            strcpy(cmd,original);
+            fclose(unable);
         }
     }
-    return 0;
     
+    return 0;
 }
 void command(char* cmd){
     pid_t pid;
