@@ -13,7 +13,7 @@
 #define MAX_PIPE 3
 #define PIPE_FD 2
 #define STR_MAX 26
-
+#define ASCII_A 97
 /*
 This file contains all the functions used to organize 
 the different features of the shell program.
@@ -190,10 +190,12 @@ int builtin(char* cmd, char* env_var[]){
         char* check = strtok_r(cmd," ",&cmd);
         process(check);
         process(cmd);
+        char keep[CMDLINE_MAX];
+        strcpy(keep,cmd);
         int len = strlen(check);
         if(len==1){
-            int index = letter-97;
-            env_var[index]=cmd;
+            int index = letter-ASCII_A;
+            env_var[index]= keep;
             fprintf(stderr,"+ completed '%s' [%d]\n",original,WEXITSTATUS(EXIT_SUCCESS));
         }
         else{
@@ -454,15 +456,16 @@ int environVar(char* cmd, char* env_var[]){
         else{
             var = strchr(cmd,'$');
             ++var;
-            valid = var[0]-97;
-            if(valid>25 || valid<0){
+            valid = var[0]-ASCII_A;
+            if(valid>STR_MAX-1 || valid<0){
                 fprintf(stderr,"Error: invalid variable name\n");
                 return 1;
             }
         }
         char *orig = original;
         char* multi = strtok_r(orig,"$",&orig);
-        multi = strcat(multi,env_var[orig[0]-97]);
+        int index = orig[0]-ASCII_A;
+        multi = strcat(multi,env_var[index]);
         char * tok1 = strtok_r(multi," ",&multi);
         process(multi);
         if(!strcmp(multi,"")) multi = NULL;
