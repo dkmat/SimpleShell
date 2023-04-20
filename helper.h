@@ -94,6 +94,10 @@ int parseError(char *cmd){
         fprintf(stderr,"Error: no output file\n");
         return 1;
     }
+    if(miss!= NULL && missPipe!=NULL && miss < missPipe){
+        fprintf(stderr,"Error: mislocated output redirection\n");
+        return 1;
+    }
     char *filename = original;
     if(miss!=NULL){
         FILE *unable;
@@ -172,7 +176,8 @@ int builtin(char* cmd){
         process(cmd);
         int retval = chdir(cmd);
         if(retval==-1){
-            perror("chdir error\n");
+            fprintf(stderr,"Error: cannot cd into directory\n");
+            retval = EXIT_FAILURE;
         }
         fprintf(stderr,"+ completed '%s' [%d]\n", original, retval);
         *cmd = *tok2;
