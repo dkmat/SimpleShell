@@ -10,6 +10,7 @@
 #include <fcntl.h>
 
 #define CMDLINE_MAX 512
+#define MAX_ARGS 16
 #define MAX_PIPE 3
 #define PIPE_FD 2
 #define STR_MAX 26
@@ -19,17 +20,16 @@ This file contains all the functions used to organize
 the different features of the shell program.
 */
 
-void start();
-void process(char *cmd);
-void command(char *cmd);
-void pipCommand(char *cmd, int last);
-int builtin(char *cmd, char* env_var[]);
-int redirect(char *cmd);
-int pipeline(char *cmd);
-int parseError(char *cmd);
-int environVar(char *cmd, char* env_var[] );
-//void findVar(char *cmd, char* env_var[]);
-void start(){
+void start(); // Start the shell
+void process(char *cmd); // Remove trailing and leading whitespace from cmd parameter
+void command(char *cmd); // Execute command in cmd using fork()+exec()+wait() method
+void pipCommand(char *cmd, int last);//Execute commands that are being piped
+int builtin(char *cmd, char* env_var[]);//Execute the builtin commands based on cmd
+int redirect(char *cmd);//Redirect output of a command if there is a '>' in cmd
+int pipeline(char *cmd);//Group commands together so they interact through the pipe
+int parseError(char *cmd);//Check for command lines errors and if any display them
+int environVar(char *cmd, char* env_var[] );//Make the extra feature environment variables
+void start(){ //All function in this file are called through this function(acts like main)
     char cmd[CMDLINE_MAX];
     char* env_var[STR_MAX];
     for(int i=0;i<STR_MAX;i++){
@@ -54,10 +54,13 @@ void start(){
         nl = strchr(cmd, '\n');
         if (nl)
             *nl = '\0';
-        
+        /*Remove leading and trailing whitespace from command line*/
         process(cmd);
-        if(environVar(cmd,env_var)){}
-        else if(!parseError(cmd)){
+        /*Check command line for $ and make environment variable*/
+        if(environVar(cmd,env_var)){
+
+        }
+        else if(!parseError(cmd)){//If no parsing errors then continue otherwise show error
 
             if(!pipeline(cmd)){
 
@@ -72,7 +75,8 @@ void start(){
         
     }
 }
-int parseError(char *cmd){
+
+int parseError(char *cmd){ //We check for all possible parsing errors one by one
     char original[CMDLINE_MAX];
     strcpy(original,cmd);
     char *tok = strtok(original," ");
@@ -82,7 +86,7 @@ int parseError(char *cmd){
         count++;
         tok = strtok(NULL," ");
     }
-    if(count>=16) {
+    if(count>=MAX_ARGS) {
         fprintf(stderr,"Error: too many process arguments\n");
         return 1;
     }
@@ -107,7 +111,8 @@ int parseError(char *cmd){
     }
     return 0;
 }
-void command(char* cmd){
+
+void command(char* cmd){ //The function used to make syscalls and also call for redirection
     pid_t pid;
     char full[CMDLINE_MAX];
     strcpy(full,cmd);
