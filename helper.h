@@ -445,23 +445,23 @@ int pipeline(char *cmd){ //This function does the actual piping of the command l
     else return 0;
 }
 int environVar(char* cmd, char* env_var[]){ //This function implements simple environment variables. It ensures that string variables, specifically, 26 characters from a-z can be used as a part of a command.
-    char* var = strchr(cmd,'$');
+    char* letter = strchr(cmd,'$');
     char original[CMDLINE_MAX]; 
     strcpy(original,cmd);
     int valid=0;
-    if(var){
-        while(var[0]!=' ' && var[0] != '\0'){
+    if(letter){
+        while(letter[0]!=' ' && letter[0] != '\0'){
             valid++;
-            ++var;
+            ++letter;
         }
         if(valid>2){
             fprintf(stderr,"Error: invalid variable name\n");
             return 1;
         }
         else{
-            var = strchr(cmd,'$');
-            ++var;
-            valid = var[0]-ASCII_A;
+            letter = strchr(cmd,'$');
+            ++letter;
+            valid = letter[0]-ASCII_A;
             if(valid>STR_MAX-1 || valid<0){
                 fprintf(stderr,"Error: invalid variable name\n");
                 return 1;
