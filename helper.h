@@ -21,10 +21,11 @@ the different features of the shell program.
 void start();
 void process(char *cmd);
 void command(char *cmd);
-void pipCommand(char *cmd);
+void pipCommand(char *cmd, int last);
 int builtin(char *cmd);
 int redirect(char *cmd);
 int pipeline(char *cmd);
+int parseError(char *cmd);
 void start(){
     char cmd[CMDLINE_MAX];
     while (1) {
@@ -47,17 +48,63 @@ void start(){
         if (nl)
             *nl = '\0';
         process(cmd);
-        if(!pipeline(cmd)){
-             /* Builtin command */
-            if(builtin(cmd)) break;
+        if(!parseError(cmd)){
+            if(!pipeline(cmd)){
+                /* Builtin command */
+                if(builtin(cmd)) break;
 
-         /* Regular command */
-            if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
-                command(cmd);
+                /* Regular command */
+                if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
+                    command(cmd);
+            }
         }
+        
     }
 }
-
+int parseError(char *cmd){
+    char original[CMDLINE_MAX];
+    strcpy(original,cmd);
+    char *tok = strtok(original," ");
+    process(original);
+    int count = 0;
+    while(tok!=NULL){
+        count++;
+        tok = strtok(NULL," ");
+    }
+    strcpy(original,cmd);
+    if(count>=16) {
+        fprintf(stderr,"Error: too many process arguments\n");
+        return 1;
+    }
+    if(cmd[0]=='>'||cmd[0]=='|'){
+        fprintf(stderr,"Error: missing command\n");
+        return 1;
+    }
+    char * missPipe = strchr(cmd,'|');
+    if(missPipe!=NULL && cmd[strlen(cmd)-1]=='|'){
+        fprintf(stderr,"Error: missing command\n");
+        return 1;
+    }
+    char * miss = strchr(cmd,'>');
+    if(miss!=NULL && cmd[strlen(cmd)-1]=='>'){
+        fprintf(stderr,"Error: no output file\n");
+        return 1;
+    }
+    if(miss!= NULL){
+        strtok_r(cmd,">",&cmd);
+        process(cmd);
+        FILE *unable = fopen(cmd,"r");
+        if(unable==NULL){
+            fprintf(stderr,"Error: cannot open output file\n");
+            return 1;
+        }
+        else{
+            strcpy(cmd,original);
+        }
+    }
+    return 0;
+    
+}
 void command(char* cmd){
     pid_t pid;
     char full[CMDLINE_MAX];
@@ -154,7 +201,11 @@ int redirect(char* cmd){
     }
     return 1;
 }
-void pipCommand(char *cmd){
+void pipCommand(char *cmd,int last){
+    int revert;
+    if(last){
+        revert = redirect(cmd);
+    }
     char * tok1 = strtok_r(cmd," ",&cmd);
     char * tok2 = 0;
     int list=0;
@@ -174,6 +225,10 @@ void pipCommand(char *cmd){
         execlp(tok1,tok2,cmd,NULL);
         perror("execlp error\n");
     }
+    if(last){
+        dup2(revert,STDOUT_FILENO);
+    }
+    
 }
 
 int pipeline(char *cmd){
@@ -211,14 +266,14 @@ int pipeline(char *cmd){
                 close(fd1[0]);
                 dup2(fd1[1],STDOUT_FILENO);
                 close(fd1[1]);
-                pipCommand(splitComs[0]);
+                pipCommand(splitComs[0],0);
             }
             pid2 = fork();
             if(pid2 == 0){
                 close(fd1[1]);
                 dup2(fd1[0],STDIN_FILENO);
                 close(fd1[0]);
-                pipCommand(splitComs[1]);
+                pipCommand(splitComs[1],1);
             }
             close(fd1[0]);
             close(fd1[1]);
@@ -237,7 +292,7 @@ int pipeline(char *cmd){
                 close (fd2[1]);
                 dup2(fd1[1],STDOUT_FILENO);
                 close(fd1[1]);
-                pipCommand(splitComs[0]);
+                pipCommand(splitComs[0],0);
             }
             pid2 = fork();
             if(pid2 ==0){
@@ -247,7 +302,7 @@ int pipeline(char *cmd){
                 close(fd1[0]);
                 dup2(fd2[1],STDOUT_FILENO);
                 close(fd2[1]);
-                pipCommand(splitComs[1]);
+                pipCommand(splitComs[1],0);
             }
             pid3 = fork();
             if(pid3 == 0){
@@ -256,7 +311,7 @@ int pipeline(char *cmd){
                 close(fd2[1]);
                 dup2(fd2[0],STDIN_FILENO);
                 close(fd2[0]);
-                pipCommand(splitComs[2]);
+                pipCommand(splitComs[2],1);
             }
             close(fd1[0]);
             close(fd1[1]);
@@ -281,7 +336,7 @@ int pipeline(char *cmd){
                 close(fd3[1]);
                 dup2(fd1[1],STDOUT_FILENO);
                 close(fd1[1]);
-                pipCommand(splitComs[0]);
+                pipCommand(splitComs[0],0);
             }
             pid2 = fork();
             if(pid2 ==0){
@@ -293,7 +348,7 @@ int pipeline(char *cmd){
                 close(fd1[0]);
                 dup2(fd2[1],STDOUT_FILENO);
                 close(fd2[1]);
-                pipCommand(splitComs[1]);
+                pipCommand(splitComs[1],0);
             }
             pid3 = fork();
             if(pid3 == 0){
@@ -305,7 +360,7 @@ int pipeline(char *cmd){
                 close(fd2[0]);
                 dup2(fd3[1],STDOUT_FILENO);
                 close(fd3[1]);
-                pipCommand(splitComs[2]);
+                pipCommand(splitComs[2],0);
             }
             pid4 = fork();
             if(pid4==0){
@@ -316,7 +371,7 @@ int pipeline(char *cmd){
                 close(fd3[1]);
                 dup2(fd3[0],STDIN_FILENO);
                 close(fd3[0]);
-                pipCommand(splitComs[3]);
+                pipCommand(splitComs[3],1);
             }
             close(fd1[0]);
             close(fd1[1]);
