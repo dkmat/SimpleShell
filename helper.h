@@ -23,12 +23,12 @@ void start();
 void process(char *cmd);
 void command(char *cmd);
 void pipCommand(char *cmd, int last);
-int builtin(char *cmd);
+int builtin(char *cmd, char* env_var[]);
 int redirect(char *cmd);
 int pipeline(char *cmd);
 int parseError(char *cmd);
 int environVar(char *cmd, char* env_var[] );
-void findVar(char *cmd, char* env_var[]);
+//void findVar(char *cmd, char* env_var[]);
 void start(){
     char cmd[CMDLINE_MAX];
     char* env_var[STR_MAX];
@@ -62,10 +62,10 @@ void start(){
             if(!pipeline(cmd)){
 
                 /* Builtin command */
-                if(builtin(cmd)) break;
+                if(builtin(cmd,env_var)) break;
 
                 /* Regular command */
-                if(strcmp(cmd,"pwd") && strcmp(cmd,"cd"))
+                if(strcmp(cmd,"pwd") && strcmp(cmd,"cd") && strcmp(cmd,"set"))
                     command(cmd);
             }
         }
@@ -147,7 +147,7 @@ void command(char* cmd){
     }
 }
 
-int builtin(char* cmd){
+int builtin(char* cmd, char* env_var[]){
     if (!strcmp(cmd, "exit")) {
         fprintf(stderr,"Bye...\n+ completed 'exit' [%d]\n",EXIT_SUCCESS);
         return 1;
@@ -175,8 +175,31 @@ int builtin(char* cmd){
             fprintf(stderr,"Error: cannot cd into directory\n");
             retval = EXIT_FAILURE;
         }
-        fprintf(stderr,"+ completed '%s' [%d]\n", original, retval);
+        fprintf(stderr,"+ completed '%s' [%d]\n", original, WEXITSTATUS(retval));
         *cmd = *tok2;
+    }
+    char setEnv[4];
+    strncpy(setEnv,cmd,3);
+    setEnv[3] = '\0';
+    if(!strcmp(setEnv,"set")){
+        char original[CMDLINE_MAX];
+        strcpy(original,cmd);
+        strtok_r(cmd," ",&cmd);
+        process(cmd);
+        char letter = cmd[0];
+        char* check = strtok_r(cmd," ",&cmd);
+        process(check);
+        process(cmd);
+        int len = strlen(check);
+        if(len==1){
+            int index = letter-97;
+            env_var[index]=cmd;
+            fprintf(stderr,"+ completed '%s' [%d]\n",original,WEXITSTATUS(EXIT_SUCCESS));
+        }
+        else{
+            fprintf(stderr,"Error: invalid variable name\n");
+        }
+        strcpy(cmd,"set");
     }
     return 0;
 }
@@ -238,11 +261,13 @@ void pipCommand(char *cmd,int last){
     char *args[] = {tok1,cmd,NULL};
     if(!list){
         execvp(tok1,args);
-        perror("execvp error\n");
+        fprintf(stderr,"Error: command not found\n");
+        exit(EXIT_FAILURE);
     }
     else if(list){
         execlp(tok1,tok2,cmd,NULL);
-        perror("execlp error\n");
+        fprintf(stderr,"Error: command not found\n");
+        exit(EXIT_FAILURE);
     }
     if(last){
         dup2(revert,STDOUT_FILENO);
@@ -422,11 +447,13 @@ int environVar(char* cmd, char* env_var[]){
             valid++;
             ++var;
         }
-        if(valid>1){
-            fprintf(stderr,"Error: invalid variable name %c\n",var[0]);
+        if(valid>2){
+            fprintf(stderr,"Error: invalid variable name\n");
             return 1;
         }
         else{
+            var = strchr(cmd,'$');
+            ++var;
             valid = var[0]-97;
             if(valid>25 || valid<0){
                 fprintf(stderr,"Error: invalid variable name\n");
@@ -436,7 +463,23 @@ int environVar(char* cmd, char* env_var[]){
         char *orig = original;
         char* multi = strtok_r(orig,"$",&orig);
         multi = strcat(multi,env_var[orig[0]-97]);
-        command(multi);
+        char * tok1 = strtok_r(multi," ",&multi);
+        process(multi);
+        if(!strcmp(multi,"")) multi = NULL;
+        char *args[] = {tok1,multi,NULL};
+        pid_t pid;
+        pid = fork();
+        if(pid==0){
+            execvp(tok1,args);
+            fprintf(stderr,"Error: command not found\n");
+            exit(EXIT_FAILURE);
+        }
+        if(pid>0){
+            int status;
+            wait(&status);
+            fprintf(stderr, "+ completed '%s' [%d]\n",
+            cmd, WEXITSTATUS(status));
+        }
         return 1;
     }
     return 0;
