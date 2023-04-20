@@ -250,8 +250,8 @@ int redirect(char* cmd){
     }
     return 1;
 }
-void pipCommand(char *cmd,int last){ //This function executes the commands on the command line through the pipe. It ensures all the commands are able to interact with each other through the pipe. 
-    int revert;
+void pipCommand(char *cmd,int last){ //This function executes the commands on the command line through the pipe. 
+    int revert; //It ensures all the commands are able to interact with each other through the pipe. 
     if(last){
         revert = redirect(cmd);
     }
